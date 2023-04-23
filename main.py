@@ -4,7 +4,6 @@ import math
 import pygame_textinput
 import sys
 
-# Bildschirmeinstellungen
 WIDTH = 2000
 HEIGHT = 1300
 FPS = 60
@@ -28,7 +27,6 @@ ai_colors = [
 ai_names = ["Charlie", "Fritz", "Nico", "James", "Alexa", "Jimmy", "Wall-E", "Jeffray", "Adolf"]
 
 
-# Farben
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 
@@ -42,7 +40,7 @@ def get_player_name(screen, font):
     text = ''
     done = False
 
-    prompt_text = "Geben Sie ihren Namen an"
+    prompt_text = "Player Name:"
     prompt_surface = font.render(prompt_text, True, (255, 255, 255))  # Weiß
     prompt_rect = prompt_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100))
 
@@ -67,7 +65,7 @@ def get_player_name(screen, font):
                         text += event.unicode
 
         screen.fill((30, 30, 30))
-        screen.blit(prompt_surface, prompt_rect)  # Zeichne den Aufforderungstext
+        screen.blit(prompt_surface, prompt_rect)
         txt_surface = font.render(text, True, color)
         width = max(200, txt_surface.get_width()+10)
         input_box.w = width
@@ -162,7 +160,7 @@ def update_scoreboard(player, ai_players, font, screen):
 
 class AIPlayer(Player):
     def __init__(self, x, y, size, name, color):
-        super().__init__(x, y, size, name)  # Add 'name' argument
+        super().__init__(x, y, size, name)
         self.color = color
         self.speed = 3
         self.image = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -182,13 +180,11 @@ class AIPlayer(Player):
         targets = []
         escape_targets = []
 
-        # Füge Essen in Reichweite zur Liste der Ziele hinzu
         for food in food_group:
             distance = math.dist(self.rect.center, food.rect.center)
             if distance < detection_range:
                 targets.append((food, distance))
 
-        # Füge Spieler und KI-Spieler in Reichweite zur Liste der Ziele hinzu
         for other_player in ai_players.sprites() + [player]:
             if other_player == self:
                 continue
@@ -196,17 +192,15 @@ class AIPlayer(Player):
             distance = math.dist(self.rect.center, other_player.rect.center)
             if distance < detection_range:
                 priority_points = other_player.points if other_player.points > 0 else 0.1
-                if self.points > other_player.points * 1.2:  # Priorisiere Ziele, die mindestens 20% kleiner sind
-                    # Priorisiere Ziele mit mehr Punkten
+                if self.points > other_player.points * 1.2:
                     targets.append((other_player, distance / priority_points))
-                elif other_player.points > self.points * 1.2:  # Füge größere Spieler zur Fluchtziel-Liste hinzu
+                elif other_player.points > self.points * 1.2:  
                     escape_targets.append((other_player, distance))
 
         if not targets and not escape_targets:
             return None
 
         if escape_targets:
-            # Wähle das nächstgelegene Fluchtziel aus und invertiere die Richtung
             closest_escape_target = min(escape_targets, key=lambda x: x[1])[0]
             escape_direction = pygame.Vector2(self.rect.center) - pygame.Vector2(closest_escape_target.rect.center)
             escape_direction.normalize_ip()
@@ -241,7 +235,7 @@ class AIPlayer(Player):
         self.speed = 3
 
 ############################################################################################################################################
-
+#Food Class
 
 class Food(pygame.sprite.Sprite):
     def __init__(self, x, y, size):
@@ -261,11 +255,12 @@ def create_food(num_food, width, height):
         food_group.add(food)
     return food_group
 
-num_food = 1300  # erhöhter Wert
+num_food = 1300
 food_group = create_food(num_food, WORLD_WIDTH, WORLD_HEIGHT)
 
+############################################################################################################################################
 
-# Spiel initialisieren
+
 pygame.init()
 font = pygame.font.Font(None, 36)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -296,7 +291,7 @@ food_group = create_food(num_food, WORLD_WIDTH, WORLD_HEIGHT)
 all_sprites.add(food_group)
 camera = pygame.Vector2(0, 0)
 
-# Spielhauptschleife
+
 running = True
 while running:
     clock.tick(FPS)
@@ -305,7 +300,6 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # Spiellogik
     player.update()
 
 
@@ -334,7 +328,6 @@ while running:
         all_sprites.add(new_food_group)
         food_group.add(new_food_group)
 
-    # Kamerabewegung
     camera_x = min(max(-player.rect.x + WIDTH // 2, -WORLD_WIDTH + WIDTH), 0)
     camera_y = min(max(-player.rect.y + HEIGHT // 2, -WORLD_HEIGHT + HEIGHT), 0)
     camera = pygame.Vector2(camera_x, camera_y)
@@ -354,7 +347,6 @@ while running:
 
 
 
-    # Zeichnen
     screen.fill((255, 255, 255))
     for food in food_group:
         screen.blit(pygame.transform.scale(food.image, (int(food.rect.width * zoom_level), int(food.rect.height * zoom_level))), (int(food.rect.topleft[0] * zoom_level), int(food.rect.topleft[1] * zoom_level)) + camera)
@@ -370,7 +362,7 @@ while running:
         ai_points_rect = ai_points_text.get_rect(center=ai_player.rect.center)
         screen.blit(ai_points_text, ai_points_rect.topleft + camera)
 
-    # Punkte anzeigen
+
     font = pygame.font.Font(None, 36)
     points_text = font.render(str(player.points), True, WHITE)
     points_rect = points_text.get_rect(center=player.rect.center)
