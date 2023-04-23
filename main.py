@@ -7,36 +7,28 @@ import sys
 WIDTH = 2000
 HEIGHT = 1300
 FPS = 60
-WORLD_WIDTH = 6000
-WORLD_HEIGHT = 6000
+WORLD_WIDTH = 10000
+WORLD_HEIGHT = 10000
 
 
-ai_colors = [
-    (213, 25, 25),  
-    (150, 26, 164),    
-    (77, 86, 216),   
-    (34, 155, 38),  
-    (213, 213, 60), 
-    (203, 136, 34),  
-    (0,255,255),
-    (105,105,105),
-    (255,20,147),
 
-]
-
-ai_names = ["Charlie", "Fritz", "Nico", "James", "Alexa", "Jimmy", "Wall-E", "Jeffray", "Adolf"]
+ai_names = ["Charlie", "Fritz", "Nico", "James", "Alexa", "Jimmy", "Wall-E", "Jeffrey", "Jamila", "Kim", "Paula", "Felix","Jennifer", "Alex", "Marta", "Casper", "Eduard", "Fred", "Arnold", "Clara"]
 
 
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 
 
+def random_color():
+    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+
 def get_player_name(screen, font):
     input_box = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 - 50, 200, 50)
     color_inactive = pygame.Color('lightskyblue3')
     color_active = pygame.Color('dodgerblue2')
-    color = color_inactive
-    active = False
+    color = color_active  # Set the initial color to color_active
+    active = True  # Set the initial state of the input box to active
     text = ''
     done = False
 
@@ -76,7 +68,6 @@ def get_player_name(screen, font):
         clock.tick(30)
 
     return text
-
 
 
 
@@ -144,27 +135,35 @@ def update_scoreboard(player, ai_players, font, screen):
     all_players = [player] + [ai_player for ai_player in ai_players]
     sorted_players = sorted(all_players, key=lambda p: p.points, reverse=True)
 
-    BLACK = (0, 0, 0) 
+    # Limit the number of displayed players to the top 10
+    sorted_players = sorted_players[:10]
+
+    BLACK = (0, 0, 0)
     screen_width = screen.get_width()
     for i, sorted_player in enumerate(sorted_players, 1):
         player_name = sorted_player.name if hasattr(sorted_player, "name") else "Player"
         points_text = font.render(f"{i}. {player_name}: {sorted_player.points}", True, BLACK)
         points_rect = points_text.get_rect(topleft=(10, 10 + 40 * (i - 1)))
-        points_rect.right = screen_width - 10 
+        points_rect.right = screen_width - 10
         screen.blit(points_text, points_rect)
 
 
 
+
 ###################################################################################################################
-#AI PLAYERS
+#AI PLAYERS Class
 
 class AIPlayer(Player):
-    def __init__(self, x, y, size, name, color):
+    def __init__(self, x, y, size, name, color=None):
         super().__init__(x, y, size, name)
-        self.color = color
+        if color is None:
+            self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))  # Generate random color
+        else:
+            self.color = color
         self.speed = 3
         self.image = pygame.Surface((size, size), pygame.SRCALPHA)
         pygame.draw.circle(self.image, self.color, (size // 2, size // 2), size // 2)
+
 
     def update(self):
         target = self.get_target(food_group, ai_players, player)
@@ -255,7 +254,7 @@ def create_food(num_food, width, height):
         food_group.add(food)
     return food_group
 
-num_food = 1300
+num_food = 2000
 food_group = create_food(num_food, WORLD_WIDTH, WORLD_HEIGHT)
 
 ############################################################################################################################################
@@ -274,14 +273,14 @@ all_sprites = pygame.sprite.Group()
 
 
 ai_players = []
-for i in range(9):
-    ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, ai_names[i], ai_colors[i])
+for i in range(19):
+    ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, ai_names[i], random_color())
     ai_players.append(ai_player)
 
 
 ai_players = pygame.sprite.Group()
-for i in range(9):
-    ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, ai_names[i], ai_colors[i])
+for i in range(19):
+    ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, ai_names[i])
     ai_players.add(ai_player)
 
 
