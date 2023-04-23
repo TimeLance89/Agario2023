@@ -3,20 +3,23 @@ import random
 import math
 import pygame_textinput
 import sys
+import names
+import numpy as np
+import time
 
 WIDTH = 2000
 HEIGHT = 1300
-FPS = 60
+FPS = 250
 WORLD_WIDTH = 10000
 WORLD_HEIGHT = 10000
 
 
-
-ai_names = ["Charlie", "Fritz", "Nico", "James", "Alexa", "Jimmy", "Wall-E", "Jeffrey", "Jamila", "Kim", "Paula", "Felix","Jennifer", "Alex", "Marta", "Casper", "Eduard", "Fred", "Arnold", "Clara"]
-
-
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
+
+
+def random_name():
+    return names.get_first_name()
 
 
 def random_color():
@@ -131,19 +134,30 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = old_center
         self.speed = 3
 
-def update_scoreboard(player, ai_players, font, screen):
+def update_scoreboard(player, ai_players, font, screen, game_time):
     all_players = [player] + [ai_player for ai_player in ai_players]
     sorted_players = sorted(all_players, key=lambda p: p.points, reverse=True)
 
-    # Limit the number of displayed players to the top 10
-    sorted_players = sorted_players[:10]
+    # Limit the number of displayed players to the top 5
+    sorted_players = sorted_players[:5]
 
     BLACK = (0, 0, 0)
     screen_width = screen.get_width()
+
+    # Render and display game time
+    game_time_text = font.render(f"Playtime: {game_time:.0f} s", True, BLACK)
+    game_time_rect = game_time_text.get_rect(topleft=(10, 10))
+    screen.blit(game_time_text, game_time_rect)
+
+    # Render and display player points
+    player_points_text = font.render(f"Points: {player.points}", True, BLACK)
+    player_points_rect = player_points_text.get_rect(topleft=(10, game_time_rect.bottom + 10))
+    screen.blit(player_points_text, player_points_rect)
+
     for i, sorted_player in enumerate(sorted_players, 1):
         player_name = sorted_player.name if hasattr(sorted_player, "name") else "Player"
         points_text = font.render(f"{i}. {player_name}: {sorted_player.points}", True, BLACK)
-        points_rect = points_text.get_rect(topleft=(10, 10 + 40 * (i - 1)))
+        points_rect = points_text.get_rect(topleft=(10, player_points_rect.bottom + 40 * i))
         points_rect.right = screen_width - 10
         screen.blit(points_text, points_rect)
 
@@ -254,7 +268,7 @@ def create_food(num_food, width, height):
         food_group.add(food)
     return food_group
 
-num_food = 2000
+num_food = 2500
 food_group = create_food(num_food, WORLD_WIDTH, WORLD_HEIGHT)
 
 ############################################################################################################################################
@@ -265,6 +279,7 @@ font = pygame.font.Font(None, 36)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Agario")
 clock = pygame.time.Clock()
+start_time = time.time()
 zoom_level = 1.0
 
 player_name = get_player_name(screen, font)
@@ -272,15 +287,11 @@ player = Player(WIDTH//2, HEIGHT//2, 20, player_name)
 all_sprites = pygame.sprite.Group()
 
 
-ai_players = []
-for i in range(19):
-    ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, ai_names[i], random_color())
-    ai_players.append(ai_player)
 
 
 ai_players = pygame.sprite.Group()
-for i in range(19):
-    ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, ai_names[i])
+for i in range(25):
+    ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, random_name())
     ai_players.add(ai_player)
 
 
@@ -361,13 +372,13 @@ while running:
         ai_points_rect = ai_points_text.get_rect(center=ai_player.rect.center)
         screen.blit(ai_points_text, ai_points_rect.topleft + camera)
 
-
+    game_time = time.time() - start_time
     font = pygame.font.Font(None, 36)
     points_text = font.render(str(player.points), True, WHITE)
     points_rect = points_text.get_rect(center=player.rect.center)
     screen.blit(points_text, points_rect.topleft + camera)
 
-    update_scoreboard(player, ai_players, font, screen)
+    update_scoreboard(player, ai_players, font, screen, game_time)
 
     pygame.display.flip()
 
