@@ -8,9 +8,10 @@ import numpy as np
 import time
 
 
-FPS = 250
+FPS = 60
 WORLD_WIDTH = 10000
 WORLD_HEIGHT = 10000
+
 
 
 WHITE = (255, 255, 255)
@@ -39,6 +40,7 @@ def get_player_name(screen, font):
     prompt_rect = prompt_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100))
 
     while not done:
+        clock = pygame.time.Clock()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -84,6 +86,83 @@ def collide_rect_ratio(rect1, rect2, ratio=1.0):
     rect2_area = rect2.width * rect2.height
 
     return intersection_area / rect1_area >= ratio or intersection_area / rect2_area >= ratio
+
+
+class Quadtree:
+    def __init__(self, level, bounds):
+        self.level = level
+        self.bounds = bounds
+        self.objects = []
+        self.nodes = []
+
+    def clear(self):
+        self.objects.clear()
+        for node in self.nodes:
+            node.clear()
+        self.nodes.clear()
+
+    def split(self):
+        sub_width = self.bounds.width / 2
+        sub_height = self.bounds.height / 2
+        x, y = self.bounds.topleft
+        self.nodes = [
+            Quadtree(self.level + 1, pygame.Rect(x, y, sub_width, sub_height)),
+            Quadtree(self.level + 1, pygame.Rect(x + sub_width, y, sub_width, sub_height)),
+            Quadtree(self.level + 1, pygame.Rect(x, y + sub_height, sub_width, sub_height)),
+            Quadtree(self.level + 1, pygame.Rect(x + sub_width, y + sub_height, sub_width, sub_height)),
+        ]
+
+    def get_index(self, rect):
+        index = -1
+        vertical_midpoint = self.bounds.left + self.bounds.width / 2
+        horizontal_midpoint = self.bounds.top + self.bounds.height / 2
+
+        top_quadrant = rect.rect.top < horizontal_midpoint and rect.rect.bottom < horizontal_midpoint
+        bottom_quadrant = rect.rect.top > horizontal_midpoint
+
+        if rect.rect.left < vertical_midpoint and rect.rect.right < vertical_midpoint:
+            if top_quadrant:
+                index = 0
+            elif bottom_quadrant:
+                index = 2
+        elif rect.rect.left > vertical_midpoint:
+            if top_quadrant:
+                index = 1
+            elif bottom_quadrant:
+                index = 3
+
+        return index
+
+
+    def insert(self, sprite):
+        if self.nodes:
+            index = self.get_index(sprite.rect)
+            if index != -1:
+                self.nodes[index].insert(sprite)
+                return
+
+        self.objects.append(sprite)
+
+        if len(self.objects) > 10 and self.level < 5:
+            if not self.nodes:
+                self.split()
+
+            i = 0
+            while i < len(self.objects):
+                index = self.get_index(self.objects[i].rect)
+                if index != -1:
+                    self.nodes[index].insert(self.objects.pop(i))
+                else:
+                    i += 1
+
+    def retrieve(self, return_objects, rect):
+        index = self.get_index(rect)
+        if index != -1 and self.nodes:
+            return_objects = self.nodes[index].retrieve(return_objects, rect)
+
+        return_objects.extend(self.objects)
+        return return_objects
+
 
 
 class Player(pygame.sprite.Sprite):
@@ -134,7 +213,7 @@ class Player(pygame.sprite.Sprite):
         self.speed = 3
 
 def update_scoreboard(player, ai_players, font, screen, game_time):
-    all_players = [player] + [ai_player for ai_player in ai_players]
+    all_players = [player] + list(ai_players)
     sorted_players = sorted(all_players, key=lambda p: p.points, reverse=True)
 
     # Limit the number of displayed players to the top 5
@@ -197,7 +276,7 @@ class AIPlayer(Player):
             if distance < detection_range:
                 targets.append((food, distance))
 
-        for other_player in ai_players.sprites() + [player]:
+        for other_player in list(ai_players) + [player]:
             if other_player == self:
                 continue
 
@@ -277,7 +356,7 @@ pygame.init()
 info_object = pygame.display.Info()
 WIDTH = info_object.current_w
 HEIGHT = info_object.current_h
-
+quadtree = Quadtree(0, pygame.Rect(0, 0, WIDTH, HEIGHT))
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
@@ -354,7 +433,9 @@ while running:
 
 
     for ai_player1 in ai_players:
-        for ai_player2 in ai_players:
+        potential_collisions = quadtree.retrieve([], ai_player1)
+
+        for ai_player2 in potential_collisions:
             if ai_player1 != ai_player2:
                 collision = collide_rect_ratio(ai_player1.rect, ai_player2.rect, ratio=1.0)
                 if collision:
@@ -364,6 +445,9 @@ while running:
                     elif ai_player2.points > ai_player1.points:
                         ai_player2.grow(ai_player1.points)
                         ai_player1.respawn()
+
+    # Quadtree nach der Kollisionserkennung und Aktualisierung leeren
+    quadtree.clear()
 
 
 
@@ -383,12 +467,11 @@ while running:
         screen.blit(ai_points_text, ai_points_rect.topleft + camera)
 
     game_time = time.time() - start_time
+    update_scoreboard(player, ai_players, font, screen, game_time)
     font = pygame.font.Font(None, 36)
     points_text = font.render(str(player.points), True, WHITE)
     points_rect = points_text.get_rect(center=player.rect.center)
     screen.blit(points_text, points_rect.topleft + camera)
-
-    update_scoreboard(player, ai_players, font, screen, game_time)
 
     pygame.display.flip()
 
