@@ -57,17 +57,21 @@ def show_pause_menu(screen, font):
 
 def show_credits_screen(screen, font):
     screen.fill((0, 0, 0))
-    credits_line1 = "Created by Steffen Ruh, Copyright 2023"
-    credits_line2 = "- Press any Key to continue -"
+    credits_line1 = "Created by Steffen R."
+    credits_line2 = "Copyright 2023"
+    credits_line3 = "- Press any Key to continue -"
 
     text1 = font.render(credits_line1, True, (255, 255, 255))
     text2 = font.render(credits_line2, True, (255, 255, 255))
+    text3 = font.render(credits_line3, True, (255, 255, 255))
 
     text1_rect = text1.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     text2_rect = text2.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+    text3_rect = text3.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 150))
 
     screen.blit(text1, text1_rect)
     screen.blit(text2, text2_rect)
+    screen.blit(text3, text3_rect)
 
     pygame.display.flip()
 
