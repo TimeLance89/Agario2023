@@ -9,13 +9,58 @@ import time
 
 
 FPS = 80
-WORLD_WIDTH = 10000
-WORLD_HEIGHT = 10000
+WORLD_WIDTH = 3500
+WORLD_HEIGHT = 3500
 
 
 
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
+
+
+def show_start_screen(screen, font):
+    logo_image = pygame.image.load('logo.jpg')
+    new_width, new_height = 400, 400
+    logo_image = pygame.transform.scale(logo_image, (new_width, new_height))
+    logo_rect = logo_image.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+
+    menu_items = ["Spiel starten", "Exit"]
+    selected_item = 0
+
+    while True:
+        screen.fill((0, 0, 0))
+        screen.blit(logo_image, logo_rect)
+
+        for index, item in enumerate(menu_items):
+            if index == selected_item:
+                color = (255, 0, 0)
+            else:
+                color = (255, 255, 255)
+            
+            menu_text = font.render(item, True, color)
+            menu_text_rect = menu_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50 * index))
+            screen.blit(menu_text, menu_text_rect)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_item = (selected_item - 1) % len(menu_items)
+                elif event.key == pygame.K_DOWN:
+                    selected_item = (selected_item + 1) % len(menu_items)
+                elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                    if selected_item == 0:
+                        return
+                    elif selected_item == 1:
+                        pygame.quit()
+                        sys.exit()
+
+
+
 
 
 def random_name():
@@ -175,7 +220,7 @@ class Player(pygame.sprite.Sprite):
         pygame.draw.circle(self.image, GREEN, (size // 2, size // 2), size // 2)
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
-        self.speed = 6
+        self.speed = 3
         self.points = 0
 
     def update(self):
@@ -253,12 +298,28 @@ class AIPlayer(Player):
             self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))  # Generate random color
         else:
             self.color = color
-        self.speed = 6
+        self.speed = 3
         self.image = pygame.Surface((size, size), pygame.SRCALPHA)
         pygame.draw.circle(self.image, self.color, (size // 2, size // 2), size // 2)
 
 
+    def move_away_from_edges(self):
+        edge_threshold = 100
+        move_towards_center = False
+
+        if self.rect.left < edge_threshold or self.rect.right > WORLD_WIDTH - edge_threshold or self.rect.top < edge_threshold or self.rect.bottom > WORLD_HEIGHT - edge_threshold:
+            move_towards_center = True
+
+        if move_towards_center:
+            center_direction = pygame.Vector2(WORLD_WIDTH // 2, WORLD_HEIGHT // 2) - pygame.Vector2(self.rect.center)
+            center_direction.normalize_ip()
+            self.rect.x += int(center_direction.x * self.speed)
+            self.rect.y += int(center_direction.y * self.speed)
+
+
+
     def update(self):
+        self.move_away_from_edges()
         target = self.get_target(food_group, ai_players, player)
         if target:
             direction = pygame.Vector2(target.rect.center) - pygame.Vector2(self.rect.center)
@@ -349,7 +410,7 @@ def create_food(num_food, width, height):
         food_group.add(food)
     return food_group
 
-num_food = 2500
+num_food = 650
 food_group = create_food(num_food, WORLD_WIDTH, WORLD_HEIGHT)
 
 ############################################################################################################################################
@@ -374,6 +435,7 @@ clock = pygame.time.Clock()
 start_time = time.time()
 zoom_level = 1.0
 
+show_start_screen(screen, font)
 player_name = get_player_name(screen, font)
 player = Player(WIDTH//2, HEIGHT//2, 20, player_name)
 all_sprites = pygame.sprite.Group()
