@@ -8,7 +8,7 @@ import numpy as np
 import time
 
 
-FPS = 60
+FPS = 80
 WORLD_WIDTH = 10000
 WORLD_HEIGHT = 10000
 
@@ -295,11 +295,13 @@ class AIPlayer(Player):
         if escape_targets:
             closest_escape_target = min(escape_targets, key=lambda x: x[1])[0]
             escape_direction = pygame.Vector2(self.rect.center) - pygame.Vector2(closest_escape_target.rect.center)
-            escape_direction.normalize_ip()
+            if escape_direction.length() > 0:
+                escape_direction.normalize_ip()
             escape_point = self.rect.center + escape_direction * detection_range
             return type("EscapeTarget", (pygame.sprite.Sprite,), {"rect": pygame.Rect(escape_point[0], escape_point[1], 0, 0)})()
 
         return min(targets, key=lambda x: x[1])[0]
+
 
 
 
