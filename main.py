@@ -18,13 +18,76 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 
 
+def show_pause_menu(screen, font):
+    menu_items = ["Continue", "Exit"]
+    selected_item = 0
+
+    while True:
+        screen.fill((0, 0, 0))
+
+        for index, item in enumerate(menu_items):
+            if index == selected_item:
+                color = (255, 0, 0)
+            else:
+                color = (255, 255, 255)
+
+            menu_text = font.render(item, True, color)
+            menu_text_rect = menu_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50 * index))
+            screen.blit(menu_text, menu_text_rect)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_item = (selected_item - 1) % len(menu_items)
+                elif event.key == pygame.K_DOWN:
+                    selected_item = (selected_item + 1) % len(menu_items)
+                elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                    if selected_item == 0:
+                        return
+                    elif selected_item == 1:
+                        pygame.quit()
+                        sys.exit()
+
+
+
+def show_credits_screen(screen, font):
+    screen.fill((0, 0, 0))
+    credits_line1 = "Created by Steffen Ruh, Copyright 2023"
+    credits_line2 = "- Press any Key to continue -"
+
+    text1 = font.render(credits_line1, True, (255, 255, 255))
+    text2 = font.render(credits_line2, True, (255, 255, 255))
+
+    text1_rect = text1.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    text2_rect = text2.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+
+    screen.blit(text1, text1_rect)
+    screen.blit(text2, text2_rect)
+
+    pygame.display.flip()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE):
+                    return
+
+
 def show_start_screen(screen, font):
     logo_image = pygame.image.load('logo.jpg')
     new_width, new_height = 400, 400
     logo_image = pygame.transform.scale(logo_image, (new_width, new_height))
     logo_rect = logo_image.get_rect(center=(WIDTH // 2, HEIGHT // 4))
 
-    menu_items = ["Spiel starten", "Exit"]
+    menu_items = ["Spiel starten","Credits" , "Exit"]
     selected_item = 0
 
     while True:
@@ -56,10 +119,10 @@ def show_start_screen(screen, font):
                     if selected_item == 0:
                         return
                     elif selected_item == 1:
+                        show_credits_screen(screen, font)
+                    elif selected_item == 2:
                         pygame.quit()
                         sys.exit()
-
-
 
 
 
@@ -464,6 +527,10 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.KEYDOWN:  # Add this line
+            if event.key == pygame.K_ESCAPE:  # Add this line
+                show_pause_menu(screen, font)
+
 
     player.update()
 
