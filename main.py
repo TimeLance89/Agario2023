@@ -9,13 +9,27 @@ import time
 
 
 FPS = 80
-WORLD_WIDTH = 3500
-WORLD_HEIGHT = 3500
+WORLD_WIDTH = 3000
+WORLD_HEIGHT = 3000
 
 
 
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
+
+
+def create_ai_players(num_players, world_width, world_height, food_group, ai_players, player):
+    for i in range(num_players):
+        ai_player = AIPlayer(random.randint(100, world_width - 100),
+                             random.randint(100, world_height - 100),
+                             20, random_name(),
+                             food_group, ai_players, player)
+        ai_players.add(ai_player)
+    return ai_players
+
+def get_top_players(players, num_top_players):
+    return sorted(players, key=lambda p: p.points, reverse=True)[:num_top_players]
+
 
 
 def show_pause_menu(screen, font):
@@ -54,12 +68,56 @@ def show_pause_menu(screen, font):
                         sys.exit()
 
 
+def show_settings_screen(screen, font):
+    menu_items = ["Music: ON", "Back"]
+    selected_item = 0
+    music_on = True
+
+    while True:
+        screen.fill((0, 0, 0))
+
+        for index, item in enumerate(menu_items):
+            if index == 0:
+                item = "Music: ON" if music_on else "Music: OFF"
+
+            if index == selected_item:
+                color = (255, 0, 0)
+            else:
+                color = (255, 255, 255)
+
+            menu_text = font.render(item, True, color)
+            menu_text_rect = menu_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50 * index))
+            screen.blit(menu_text, menu_text_rect)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_item = (selected_item - 1) % len(menu_items)
+                elif event.key == pygame.K_DOWN:
+                    selected_item = (selected_item + 1) % len(menu_items)
+                elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                    if selected_item == 0:
+                        music_on = not music_on
+                        if music_on:
+                            pygame.mixer.music.play(-1)
+                        else:
+                            pygame.mixer.music.stop()
+                    elif selected_item == 1:
+                        return
+
+
+
 
 def show_credits_screen(screen, font):
     screen.fill((0, 0, 0))
     credits_line1 = "Created by Steffen R."
     credits_line2 = "Copyright 2023"
-    credits_line3 = "- Press any Key to continue -"
+    credits_line3 = "- Press ENTER to continue -"
 
     text1 = font.render(credits_line1, True, (255, 255, 255))
     text2 = font.render(credits_line2, True, (255, 255, 255))
@@ -98,7 +156,7 @@ def show_start_screen(screen, font):
     headline_surface = headline_font.render(headline_text, True, headline_color)
     headline_rect = headline_surface.get_rect(center=(WIDTH // 2, HEIGHT // 3.7 + new_height // 2 + 20))
 
-    menu_items = ["Spiel starten", "Credits", "Exit"]
+    menu_items = ["Start Game", "Settings", "Credits", "Exit"]
     selected_item = 0
 
     while True:
@@ -133,8 +191,10 @@ def show_start_screen(screen, font):
                     if selected_item == 0:
                         return
                     elif selected_item == 1:
-                        show_credits_screen(screen, font)
+                        show_settings_screen(screen, font)
                     elif selected_item == 2:
+                        show_credits_screen(screen, font)
+                    elif selected_item == 3:
                         pygame.quit()
                         sys.exit()
 
@@ -340,10 +400,15 @@ def update_scoreboard(player, ai_players, font, screen, game_time):
     sorted_players = sorted(all_players, key=lambda p: p.points, reverse=True)
 
     # Limit the number of displayed players to the top 5
-    sorted_players = sorted_players[:5]
+    sorted_players = sorted_players[:10]
 
     BLACK = (0, 0, 0)
     screen_width = screen.get_width()
+
+    seconds_left = int(time_limit - game_time)
+    time_text = font.render(f"Time left: {seconds_left}s", True, WHITE)
+    time_rect = time_text.get_rect(topleft=(10, 10))
+    screen.blit(time_text, time_rect)
 
     # Render and display game time
     game_time_text = font.render(f"Playtime: {game_time:.0f} s", True, BLACK)
@@ -369,13 +434,17 @@ def update_scoreboard(player, ai_players, font, screen, game_time):
 #AI PLAYERS Class
 
 class AIPlayer(Player):
-    def __init__(self, x, y, size, name, color=None):
+    def __init__(self, x, y, size, name, food_group, ai_players, player, color=None):
         super().__init__(x, y, size, name)
         if color is None:
             self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))  # Generate random color
         else:
             self.color = color
+        self.food_group = food_group
+        self.ai_players = ai_players
+        self.player = player
         self.speed = 3
+        self.score = 0
         self.image = pygame.Surface((size, size), pygame.SRCALPHA)
         pygame.draw.circle(self.image, self.color, (size // 2, size // 2), size // 2)
 
@@ -397,13 +466,15 @@ class AIPlayer(Player):
 
     def update(self):
         self.move_away_from_edges()
-        target = self.get_target(food_group, ai_players, player)
+        target = self.get_target(self.food_group, self.ai_players, self.player)
         if target:
             direction = pygame.Vector2(target.rect.center) - pygame.Vector2(self.rect.center)
-            direction.normalize_ip()
-            self.rect.x += int(direction.x * self.speed)
-            self.rect.y += int(direction.y * self.speed)
+            if direction.length() > 0:  # Überprüfen, ob die Länge des Vektors größer als Null ist
+                direction.normalize_ip()
+                self.rect.x += int(direction.x * self.speed)
+                self.rect.y += int(direction.y * self.speed)
         self.rect.clamp_ip(pygame.Rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT))
+
 
     def get_target(self, food_group, ai_players, player):
         detection_range = 500
@@ -487,7 +558,7 @@ def create_food(num_food, width, height):
         food_group.add(food)
     return food_group
 
-num_food = 650
+num_food = 350
 food_group = create_food(num_food, WORLD_WIDTH, WORLD_HEIGHT)
 
 ############################################################################################################################################
@@ -514,23 +585,27 @@ zoom_level = 1.0
 
 show_start_screen(screen, font)
 player_name = get_player_name(screen, font)
-player = Player(WIDTH//2, HEIGHT//2, 20, player_name)
+player = Player(WIDTH // 2, HEIGHT // 2, 20, player_name)
 all_sprites = pygame.sprite.Group()
 
-
-
-
-ai_players = pygame.sprite.Group()
-for i in range(12):
-    ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, random_name())
-    ai_players.add(ai_player)
-
-
-all_sprites.add(ai_players)
-
-food_group = create_food(num_food, WORLD_WIDTH, WORLD_HEIGHT)  
+# Erstellen Sie die food_group vor der for-Schleife
+food_group = create_food(num_food, WORLD_WIDTH, WORLD_HEIGHT)
 all_sprites.add(food_group)
+
+num_rounds = 3
+round_limits = [9, 5, 5]  # Die Anzahl der KI-Spieler pro Runde
+time_limit = 60  # Zeitlimit in Sekunden (3 Minuten)
+prev_round_num = 0
+# Erstellen Sie ai_players außerhalb der for-Schleife
+ai_players = pygame.sprite.Group()
+
+# Fügen Sie ai_players als Parameter in der Funktion create_ai_players hinzu
+for round_num in range(num_rounds):
+    ai_players = create_ai_players(round_limits[round_num], WORLD_WIDTH, WORLD_HEIGHT, food_group, ai_players, player)
+    all_sprites.add(ai_players)
+
 camera = pygame.Vector2(0, 0)
+
 
 
 running = True
@@ -554,9 +629,11 @@ while running:
         ai_eaten_food = pygame.sprite.spritecollide(ai_player, food_group, True)
         if ai_eaten_food:
             ai_player.grow(len(ai_eaten_food))
+            ai_player.score += len(ai_eaten_food)  # Update the AI player's score
             new_food_group = create_food(len(ai_eaten_food), WORLD_WIDTH, WORLD_HEIGHT)
             all_sprites.add(new_food_group)
             food_group.add(new_food_group)
+
 
         collision = collide_rect_ratio(player.rect, ai_player.rect, ratio=1.0)
         if collision:
@@ -615,6 +692,28 @@ while running:
         screen.blit(ai_points_text, ai_points_rect.topleft + camera)
 
     game_time = time.time() - start_time
+    seconds_left = time_limit - game_time
+
+    if seconds_left <= 0:
+        all_players = [player] + ai_players.sprites()
+        top_players = get_top_players(all_players, round_limits[min(round_num + 1, num_rounds - 1)])
+
+        if round_num != prev_round_num:
+            player.size = 20
+            player.points = 0
+            for ai_player in ai_players:
+                ai_player.size = 20
+                ai_player.points = 0
+            prev_round_num = round_num
+
+        if player not in top_players:
+            break
+
+        ai_players = top_players[1:]
+        all_sprites.remove(ai_players)
+        start_time = time.time()
+        round_num += 1
+
     update_scoreboard(player, ai_players, font, screen, game_time)
     font = pygame.font.Font(None, 36)
     points_text = font.render(str(player.points), True, WHITE)
