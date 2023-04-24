@@ -69,7 +69,7 @@ def get_player_name(screen, font):
         pygame.draw.rect(screen, color, input_box, 2)
 
         pygame.display.flip()
-        clock.tick(30)
+        clock.tick(FPS)
 
     return text
 
@@ -112,20 +112,21 @@ class Quadtree:
             Quadtree(self.level + 1, pygame.Rect(x + sub_width, y + sub_height, sub_width, sub_height)),
         ]
 
-    def get_index(self, rect):
+    def get_index(self, sprite):
+        rect = sprite.rect
         index = -1
         vertical_midpoint = self.bounds.left + self.bounds.width / 2
         horizontal_midpoint = self.bounds.top + self.bounds.height / 2
 
-        top_quadrant = rect.rect.top < horizontal_midpoint and rect.rect.bottom < horizontal_midpoint
-        bottom_quadrant = rect.rect.top > horizontal_midpoint
+        top_quadrant = rect.top < horizontal_midpoint and rect.bottom < horizontal_midpoint
+        bottom_quadrant = rect.top > horizontal_midpoint
 
-        if rect.rect.left < vertical_midpoint and rect.rect.right < vertical_midpoint:
+        if rect.left < vertical_midpoint and rect.right < vertical_midpoint:
             if top_quadrant:
                 index = 0
             elif bottom_quadrant:
                 index = 2
-        elif rect.rect.left > vertical_midpoint:
+        elif rect.left > vertical_midpoint:
             if top_quadrant:
                 index = 1
             elif bottom_quadrant:
@@ -174,7 +175,7 @@ class Player(pygame.sprite.Sprite):
         pygame.draw.circle(self.image, GREEN, (size // 2, size // 2), size // 2)
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
-        self.speed = 3
+        self.speed = 6
         self.points = 0
 
     def update(self):
@@ -252,7 +253,7 @@ class AIPlayer(Player):
             self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))  # Generate random color
         else:
             self.color = color
-        self.speed = 3
+        self.speed = 6
         self.image = pygame.Surface((size, size), pygame.SRCALPHA)
         pygame.draw.circle(self.image, self.color, (size // 2, size // 2), size // 2)
 
@@ -393,6 +394,7 @@ camera = pygame.Vector2(0, 0)
 
 running = True
 while running:
+    quadtree.clear()
     clock.tick(FPS)
 
     for event in pygame.event.get():
@@ -437,14 +439,15 @@ while running:
 
         for ai_player2 in potential_collisions:
             if ai_player1 != ai_player2:
-                collision = collide_rect_ratio(ai_player1.rect, ai_player2.rect, ratio=1.0)
-                if collision:
-                    if ai_player1.points > ai_player2.points:
-                        ai_player1.grow(ai_player2.points)
-                        ai_player2.respawn()
-                    elif ai_player2.points > ai_player1.points:
-                        ai_player2.grow(ai_player1.points)
-                        ai_player1.respawn()
+                if ai_player1.rect.colliderect(ai_player2.rect):
+                    collision = collide_rect_ratio(ai_player1.rect, ai_player2.rect, ratio=1.0)
+                    if collision:
+                        if ai_player1.points > ai_player2.points:
+                            ai_player1.grow(ai_player2.points)
+                            ai_player2.respawn()
+                        elif ai_player2.points > ai_player1.points:
+                            ai_player2.grow(ai_player1.points)
+                            ai_player1.respawn()
 
     # Quadtree nach der Kollisionserkennung und Aktualisierung leeren
     quadtree.clear()
