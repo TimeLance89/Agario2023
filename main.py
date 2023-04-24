@@ -83,23 +83,33 @@ def show_credits_screen(screen, font):
 
 def show_start_screen(screen, font):
     logo_image = pygame.image.load('logo.jpg')
-    new_width, new_height = 400, 400
+    new_width, new_height = 250, 250
     logo_image = pygame.transform.scale(logo_image, (new_width, new_height))
     logo_rect = logo_image.get_rect(center=(WIDTH // 2, HEIGHT // 4))
 
-    menu_items = ["Spiel starten","Credits" , "Exit"]
+    # Überschrift hinzufügen
+    headline_text = "Agar.io"
+    headline_color = (255, 255, 255)
+    headline_font = pygame.font.Font(None, 110)
+    headline_surface = headline_font.render(headline_text, True, headline_color)
+    headline_rect = headline_surface.get_rect(center=(WIDTH // 2, HEIGHT // 3.7 + new_height // 2 + 20))
+
+    menu_items = ["Spiel starten", "Credits", "Exit"]
     selected_item = 0
 
     while True:
         screen.fill((0, 0, 0))
         screen.blit(logo_image, logo_rect)
 
+        # Überschrift zeichnen
+        screen.blit(headline_surface, headline_rect)
+
         for index, item in enumerate(menu_items):
             if index == selected_item:
                 color = (255, 0, 0)
             else:
                 color = (255, 255, 255)
-            
+
             menu_text = font.render(item, True, color)
             menu_text_rect = menu_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50 * index))
             screen.blit(menu_text, menu_text_rect)
