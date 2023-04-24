@@ -367,7 +367,7 @@ class AIPlayer(Player):
 
 
     def move_away_from_edges(self):
-        edge_threshold = 100
+        edge_threshold = 2
         move_towards_center = False
 
         if self.rect.left < edge_threshold or self.rect.right > WORLD_WIDTH - edge_threshold or self.rect.top < edge_threshold or self.rect.bottom > WORLD_HEIGHT - edge_threshold:
@@ -507,7 +507,7 @@ all_sprites = pygame.sprite.Group()
 
 
 ai_players = pygame.sprite.Group()
-for i in range(25):
+for i in range(12):
     ai_player = AIPlayer(random.randint(100, WORLD_WIDTH - 100), random.randint(100, WORLD_HEIGHT - 100), 20, random_name())
     ai_players.add(ai_player)
 
